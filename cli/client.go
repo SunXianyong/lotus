@@ -336,6 +336,7 @@ var clientDealCmd = &cli.Command{
 		}
 		defer closer()
 		ctx := ReqContext(cctx)
+		afmt := NewAppFmt(cctx.App)
 
 		if cctx.NArg() != 4 {
 			return xerrors.New("expected 4 args: dataCid, miner, price, duration")
@@ -455,7 +456,7 @@ var clientDealCmd = &cli.Command{
 			return err
 		}
 
-		fmt.Println(encoder.Encode(*proposal))
+		afmt.Println(encoder.Encode(*proposal))
 
 		return nil
 	},
@@ -468,6 +469,7 @@ func interactiveDeal(cctx *cli.Context) error {
 	}
 	defer closer()
 	ctx := ReqContext(cctx)
+	afmt := NewAppFmt(cctx.App)
 
 	state := "import"
 
@@ -506,10 +508,10 @@ func interactiveDeal(cctx *cli.Context) error {
 
 		switch state {
 		case "import":
-			fmt.Print("Data CID (from " + color.YellowString("lotus client import") + "): ")
+			afmt.Print("Data CID (from " + color.YellowString("lotus client import") + "): ")
 
 			var cidStr string
-			_, err := fmt.Scan(&cidStr)
+			_, err := afmt.Scan(&cidStr)
 			if err != nil {
 				printErr(xerrors.Errorf("reading cid string: %w", err))
 				continue
@@ -523,9 +525,9 @@ func interactiveDeal(cctx *cli.Context) error {
 
 			state = "duration"
 		case "duration":
-			fmt.Print("Deal duration (days): ")
+			afmt.Print("Deal duration (days): ")
 
-			_, err := fmt.Scan(&days)
+			_, err := afmt.Scan(&days)
 			if err != nil {
 				printErr(xerrors.Errorf("parsing duration: %w", err))
 				continue
@@ -538,10 +540,10 @@ func interactiveDeal(cctx *cli.Context) error {
 
 			state = "miner"
 		case "miner":
-			fmt.Print("Miner Address (f0..): ")
+			afmt.Print("Miner Address (f0..): ")
 			var maddrStr string
 
-			_, err := fmt.Scan(&maddrStr)
+			_, err := afmt.Scan(&maddrStr)
 			if err != nil {
 				printErr(xerrors.Errorf("reading miner address: %w", err))
 				continue
@@ -603,10 +605,10 @@ func interactiveDeal(cctx *cli.Context) error {
 				continue
 			}
 
-			fmt.Print("\nMake this a verified deal? (yes/no): ")
+			afmt.Print("\nMake this a verified deal? (yes/no): ")
 
 			var yn string
-			_, err = fmt.Scan(&yn)
+			_, err = afmt.Scan(&yn)
 			if err != nil {
 				return err
 			}
@@ -617,7 +619,7 @@ func interactiveDeal(cctx *cli.Context) error {
 			case "no":
 				verified = false
 			default:
-				fmt.Println("Type in full 'yes' or 'no'")
+				afmt.Println("Type in full 'yes' or 'no'")
 				continue
 			}
 
@@ -650,21 +652,21 @@ func interactiveDeal(cctx *cli.Context) error {
 			epochPrice = types.BigDiv(types.BigMul(pricePerGib, types.NewInt(uint64(ds.PieceSize))), gib)
 			totalPrice := types.BigMul(epochPrice, types.NewInt(uint64(epochs)))
 
-			fmt.Printf("-----\n")
-			fmt.Printf("Proposing from %s\n", a)
-			fmt.Printf("\tBalance: %s\n", types.FIL(fromBal))
-			fmt.Printf("\n")
-			fmt.Printf("Piece size: %s (Payload size: %s)\n", units.BytesSize(float64(ds.PieceSize)), units.BytesSize(float64(ds.PayloadSize)))
-			fmt.Printf("Duration: %s\n", dur)
-			fmt.Printf("Total price: ~%s (%s per epoch)\n", types.FIL(totalPrice), types.FIL(epochPrice))
-			fmt.Printf("Verified: %v\n", verified)
+			afmt.Printf("-----\n")
+			afmt.Printf("Proposing from %s\n", a)
+			afmt.Printf("\tBalance: %s\n", types.FIL(fromBal))
+			afmt.Printf("\n")
+			afmt.Printf("Piece size: %s (Payload size: %s)\n", units.BytesSize(float64(ds.PieceSize)), units.BytesSize(float64(ds.PayloadSize)))
+			afmt.Printf("Duration: %s\n", dur)
+			afmt.Printf("Total price: ~%s (%s per epoch)\n", types.FIL(totalPrice), types.FIL(epochPrice))
+			afmt.Printf("Verified: %v\n", verified)
 
 			state = "accept"
 		case "accept":
-			fmt.Print("\nAccept (yes/no): ")
+			afmt.Print("\nAccept (yes/no): ")
 
 			var yn string
-			_, err := fmt.Scan(&yn)
+			_, err := afmt.Scan(&yn)
 			if err != nil {
 				return err
 			}
@@ -674,7 +676,7 @@ func interactiveDeal(cctx *cli.Context) error {
 			}
 
 			if yn != "yes" {
-				fmt.Println("Type in full 'yes' or 'no'")
+				afmt.Println("Type in full 'yes' or 'no'")
 				continue
 			}
 
@@ -703,7 +705,7 @@ func interactiveDeal(cctx *cli.Context) error {
 				return err
 			}
 
-			fmt.Println("\nDeal CID:", color.GreenString(encoder.Encode(*proposal)))
+			afmt.Println("\nDeal CID:", color.GreenString(encoder.Encode(*proposal)))
 			return nil
 		default:
 			return xerrors.Errorf("unknown state: %s", state)
@@ -815,6 +817,7 @@ var clientRetrieveCmd = &cli.Command{
 		}
 		defer closer()
 		ctx := ReqContext(cctx)
+		afmt := NewAppFmt(cctx.App)
 
 		var payer address.Address
 		if cctx.String("from") != "" {
@@ -923,14 +926,14 @@ var clientRetrieveCmd = &cli.Command{
 			select {
 			case evt, ok := <-updates:
 				if ok {
-					fmt.Printf("> Recv: %s, Paid %s, %s (%s)\n",
+					afmt.Printf("> Recv: %s, Paid %s, %s (%s)\n",
 						types.SizeStr(types.NewInt(evt.BytesReceived)),
 						types.FIL(evt.FundsSpent),
 						retrievalmarket.ClientEvents[evt.Event],
 						retrievalmarket.DealStatuses[evt.Status],
 					)
 				} else {
-					fmt.Println("Success")
+					afmt.Println("Success")
 					return nil
 				}
 
@@ -963,8 +966,9 @@ var clientQueryAskCmd = &cli.Command{
 		},
 	},
 	Action: func(cctx *cli.Context) error {
+		afmt := NewAppFmt(cctx.App)
 		if cctx.NArg() != 1 {
-			fmt.Println("Usage: query-ask [minerAddress]")
+			afmt.Println("Usage: query-ask [minerAddress]")
 			return nil
 		}
 
@@ -1005,23 +1009,23 @@ var clientQueryAskCmd = &cli.Command{
 			return err
 		}
 
-		fmt.Printf("Ask: %s\n", maddr)
-		fmt.Printf("Price per GiB: %s\n", types.FIL(ask.Price))
-		fmt.Printf("Verified Price per GiB: %s\n", types.FIL(ask.VerifiedPrice))
-		fmt.Printf("Max Piece size: %s\n", types.SizeStr(types.NewInt(uint64(ask.MaxPieceSize))))
+		afmt.Printf("Ask: %s\n", maddr)
+		afmt.Printf("Price per GiB: %s\n", types.FIL(ask.Price))
+		afmt.Printf("Verified Price per GiB: %s\n", types.FIL(ask.VerifiedPrice))
+		afmt.Printf("Max Piece size: %s\n", types.SizeStr(types.NewInt(uint64(ask.MaxPieceSize))))
 
 		size := cctx.Int64("size")
 		if size == 0 {
 			return nil
 		}
 		perEpoch := types.BigDiv(types.BigMul(ask.Price, types.NewInt(uint64(size))), types.NewInt(1<<30))
-		fmt.Printf("Price per Block: %s\n", types.FIL(perEpoch))
+		afmt.Printf("Price per Block: %s\n", types.FIL(perEpoch))
 
 		duration := cctx.Int64("duration")
 		if duration == 0 {
 			return nil
 		}
-		fmt.Printf("Total Price: %s\n", types.FIL(types.BigMul(perEpoch, types.NewInt(uint64(duration)))))
+		afmt.Printf("Total Price: %s\n", types.FIL(types.BigMul(perEpoch, types.NewInt(uint64(duration)))))
 
 		return nil
 	},
@@ -1104,7 +1108,7 @@ var clientListDeals = &cli.Command{
 			}
 		}
 
-		return outputStorageDeals(ctx, os.Stdout, api, localDeals, cctx.Bool("verbose"), cctx.Bool("color"), showFailed)
+		return outputStorageDeals(ctx, cctx.App.Writer, api, localDeals, cctx.Bool("verbose"), cctx.Bool("color"), showFailed)
 	},
 }
 

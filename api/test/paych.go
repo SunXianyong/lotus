@@ -3,7 +3,6 @@ package test
 import (
 	"context"
 	"fmt"
-	"os"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -29,8 +28,6 @@ import (
 )
 
 func TestPaymentChannels(t *testing.T, b APIBuilder, blocktime time.Duration) {
-	_ = os.Setenv("BELLMAN_NO_GPU", "1")
-
 	ctx := context.Background()
 	n, sn := b(t, TwoFull, OneMiner)
 
